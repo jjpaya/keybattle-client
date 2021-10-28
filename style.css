@@ -1,0 +1,51 @@
+body {
+  font-family: sans-serif;
+  margin: 0;
+}
+
+.ui, .game {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.cell-active {
+  background-color: lightgreen;
+}
+
+.cell-active-me {
+  background-color: gold;
+}
+
+.map {
+  width: fit-content;
+  margin: auto;
+  font-size: 32px;
+  display: grid;
+  grid-template-columns: repeat(30, 64px);
+  transition: 0.5s transform;
+}
+
+.map-cell {
+  padding: 15px;
+  text-align: center;
+  border-style: ridge;
+  color: #777;
+  transition: 0.5s background-color;
+}
+
+.players {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 16px;
+}
+
+.player-elm {
+  width: 32px;
+  height: 42px;
+  background-color: #0066007F;
+}
