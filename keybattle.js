@@ -124,6 +124,7 @@ var mapWidth = 30;
 var playersPerRound = 10;
 var mapReady = false;
 var gameId = null;
+var posSynced = false; /* for movement prediction */
 var selfPlayer = null;
 var selfPlayerId = null;
 var myCell = null;
@@ -196,6 +197,42 @@ function movePlayer(key) {
   buf[0] = OPCODE.C.KEYPRESS;
   buf[1] = key.charCodeAt(0);
   ws.send(buf.buffer);
+
+  if (selfPlayer.frozen || !posSynced) {
+    return;
+  }
+
+  const getCell = (x, y) => map[x + y * mapWidth];
+  const getPlayerAt = (x, y) => {
+    for (var id in players) {
+      var p = players[id];
+      if (p.x == x && p.y == y) {
+        return p;
+      }
+    }
+
+    return null;
+  };
+  
+  /* simple move prediction to hide lag */
+  outer_loop:
+  for (var oy = -1; oy <= 1; oy++) {
+    for (var ox = -1; ox <= 1; ox++) {
+      if (ox == 0 && oy == 0) { continue; }
+      if (getCell(selfPlayer.x + ox, selfPlayer.y + oy) == key[0]) {
+        if (getPlayerAt(selfPlayer.x + ox, selfPlayer.y + oy)) {
+          /* Unpredictable movement when colliding with players, don't even try */
+          break outer_loop;
+        }
+
+        selfPlayer.x += ox;
+        selfPlayer.y += oy;
+        posSynced = false;
+        renderPlayers();
+        break outer_loop;
+      }
+    }
+  }
 }
 
 function centerCamera(me) {
@@ -453,6 +490,7 @@ function readPacket(data) {
 
       players = newPlayers;
       selfPlayer = players[selfPlayerId];
+      posSynced = true;
       renderPlayers();
       applyPaintUpdates(paintUpdates);
       updateScoreboard();
