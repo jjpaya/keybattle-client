@@ -1,7 +1,7 @@
 'use strict';
 
-const [ el_game, el_game_map, el_game_players ] = [
-  '.game', '.map', '.players'
+const [ el_game, el_game_map, el_game_players, el_stats_winner, el_end_stats, el_end_close ] = [
+  '.game', '.map', '.players', '.game-winner', '.end-stats', '.close-endscreen'
 ].map(sel => document.querySelector(sel));
 
 const TICK_RATE = 50;
@@ -116,6 +116,7 @@ var map = [];
 var paintMap = [];
 var tickTimer = -1;
 var centerCameraFrameRequest = -1;
+var oldGameState = STATE.DISCON;
 var gameState = STATE.DISCON;
 var stateTime = null;
 var currentlyDisplayedGameTime = 0;
@@ -128,6 +129,7 @@ var selfPlayerId = null;
 var myCell = null;
 var numPlayers = 0;
 var players = {};
+var endGamePlayers = null;
 var playerColors = null;
 
 document.addEventListener('keydown', e => {
@@ -146,11 +148,26 @@ window.addEventListener('resize', e => {
   }
 });
 
+el_end_close.addEventListener('click', e => {
+  el_end_stats.classList.add('closed');
+});
+
 function setGameState(state) {
   const htmlStates = ['offline', 'discon', 'idle', 'playing', 'ended'];
-  state = htmlStates[state + 2];
-  console.log('New game state:', state);
-  document.body.setAttribute('game-state', state);
+  var textState = htmlStates[state + 2];
+  console.log('New game state:', textState);
+  document.body.setAttribute('game-state', textState);
+  oldGameState = gameState;
+  gameState = state;
+  
+  if (textState == 'ended') {
+    if (gameState !== oldGameState) {
+      endGamePlayers = players;
+      updateScoreboard();
+    }
+
+    el_end_stats.classList.remove('closed');
+  }
 }
 
 function updateStatusTexts() {
@@ -246,20 +263,34 @@ function updateScoreboard() {
 
   const playerPaintPoints = id => paintMap.reduce((sum, cell) => sum + (cell === id ? 10 : 0), 0);
 
-  for (var id in players) {
+  for (var id in (gameState == STATE.ENDED ? endGamePlayers : players)) {
     var sum = playerPaintPoints(+id);
     var total = players[id].points + sum;
+    var pname = 'Player ' + id + ((+id) === selfPlayerId ? ' (You)' : '');
     scoreRows.push({
       tag: 'div',
       children: [
-        {tag: 'span', innerText: 'Player ' + id},
+        {tag: 'span', innerText: pname},
         {tag: 'span', innerText: total}
       ],
-      totalPoints: total
+      totalPoints: total,
+      playerName: pname
     });
   }
 
   scoreRows = scoreRows.sort((a, b) => b.totalPoints - a.totalPoints);
+
+  if (scoreRows[0]) {
+    var winner = scoreRows[0];
+    mkHTMLStructure({children: [{
+      tag: 'b',
+      innerText: winner.playerName
+    }, {
+      tag: 'span',
+      innerText: 'won the game with ' + winner.totalPoints + ' points!'
+    }]}, el_stats_winner, true);
+  }
+
   mkHTMLStructure({children: scoreRows}, elm_scores, true);
 }
 
@@ -365,7 +396,7 @@ function readPacket(data) {
   switch (dv.getUint8(0)) {
     case OPCODE.S.GAME_INFO:
       numPlayers = dv.getUint8(1);
-      gameState = dv.getUint16(2, true);
+      var newGameState = dv.getUint16(2, true);
       gameId = dv.getUint32(4, true);
       mapWidth = dv.getUint32(8, true);
       playersPerRound = dv.getUint32(12, true);
@@ -377,7 +408,7 @@ function readPacket(data) {
       console.log("Got game id:", gameId, ",", numPlayers, "players,", mapWidth, "mapWidth, colors:", playerColors);
       initPlayerColors();
       initStylingConstants();
-      setGameState(gameState);
+      setGameState(newGameState);
       updateStatusTexts();
       break;
 

@@ -20,15 +20,9 @@ $states: (ended, playing, idle, offline, discon);
   .show-when-#{$state} {
     @extend %displaynone;
   }
+  
   body[game-state="#{$state}"] .show-when-#{$state} {
     @extend %display;
-    // @each $negationState in $states {
-    //   @if $state != $negationState {
-    //     .show-when-#{$negationState} {
-    //       @extend %displaynone;
-    //     }
-    //   }
-    // }
   }
 }
 
@@ -91,6 +85,35 @@ body {
           }
 
         }
+      }
+    }
+  }
+
+  .end-stats {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    &.closed {
+      display: none;
+    }
+
+    h2 {
+      width: max-content;
+    }
+
+    a.close-endscreen {
+      text-decoration: none;
+      color: white;
+      border: 1px solid lightcoral;
+      background-color: lightcoral;
+      border-radius: 5px;
+      padding: 0 3px;
+    }
+
+    .game-winner {
+      b {
+        margin-right: 5px;
       }
     }
   }
