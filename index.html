@@ -7,11 +7,37 @@
   <script src="keybattle.js" defer></script>
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
-  <div class="ui"></div>
-  <div class="game">
+<body game-state="offline">
+  <div class="game show-when-idle show-when-playing show-when-ended">
     <div class="players"></div>
     <div class="map"></div>
+  </div>
+  <div class="ui">
+    <div class="status show-when-idle show-when-playing">
+      <h3 class="show-when-idle">Waiting for players...</h3>
+      <h3 class="show-when-ended">Round ended!</h3>
+      <h3>Your color: <div class="my-color"></div></h3>
+      <div>Players: <span class="num-players"></span>/<span class="pl-per-round"></span></div>
+    </div>
+    <div class="timer show-when-idle show-when-playing show-when-ended">
+      <span class="game-timer">0:00</span>
+    </div>
+    <div class="scoreboard show-when-playing show-when-ended">
+      <h4>SCORES</h4>
+      <hr>
+      <div class="scores">
+        <div>
+          <span>player 1</span>
+          <span>9000</span>
+        </div>
+      </div>
+    </div>
+    <div class="main-window always-active show-when-offline show-when-discon">
+      <h1>KeyBattle</h1>
+      <hr>
+      <div class="show-when-offline">Connecting to the server...</div>
+      <div class="show-when-discon">Disconnected from the server!</div>
+    </div>
   </div>
 </body>
 </html>

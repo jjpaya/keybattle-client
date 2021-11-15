@@ -1,0 +1,207 @@
+@mixin floating-card {
+  padding: 15px;
+  text-align: center;
+  border-radius: 5px;
+  margin: 5px;
+  color: #0000007f;
+  background-color: white;
+  box-sizing: border-box;
+  box-shadow: 0 1px 3px 0px;
+}
+
+@mixin text-outline($clr) {
+  text-shadow: 1px 1px $clr, -1px -1px $clr, -1px 1px $clr, 1px -1px $clr;
+}
+
+%display { display: initial; }
+%displaynone { display: none; }
+$states: (ended, playing, idle, offline, discon);
+@each $state in $states { // Hide all other non-active states with display: none
+  .show-when-#{$state} {
+    @extend %displaynone;
+  }
+  body[game-state="#{$state}"] .show-when-#{$state} {
+    @extend %display;
+    // @each $negationState in $states {
+    //   @if $state != $negationState {
+    //     .show-when-#{$negationState} {
+    //       @extend %displaynone;
+    //     }
+    //   }
+    // }
+  }
+}
+
+body {
+  background-color: seagreen;
+  font-family: sans-serif;
+  margin: 0;
+  h1, h2, h3, h4, h5, h6 {
+    margin: 10px 0;
+  }
+
+  >.ui, >.game {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+}
+
+.ui {
+  >div {
+    @include floating-card();
+    position: absolute;
+    color: #000000af;
+    width: 20vw;
+    min-width: min-content;
+    max-width: 250px;
+    background-color: #DDDDDD7F;
+    backdrop-filter: blur(3px);
+
+    &:not(.always-active):hover, &.always-active {
+      background-color: white;
+    }
+  }
+
+  .scoreboard {
+    right: 0;
+    top: 0;
+    margin: 10px;
+
+    .scores {
+      display: table;
+      margin: auto;
+      width: 100%;
+
+      >div {
+        display: table-row;
+        
+        &:nth-child(even) {
+          background-color: #0000001f
+        }
+
+        span {
+          display: table-cell;
+          padding: 5px;
+          &:first-child {
+            font-weight: bold;
+          }
+
+        }
+      }
+    }
+  }
+
+  .main-window {
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .timer {
+    top: 0;
+    left: 50%;
+    width: fit-content;
+    font-weight: bold;
+    font-size: 1.5em;
+    transform: translateX(-50%);
+  }
+
+  .my-color {
+    width: 32px;
+    height: 32px;
+    display: inline-block;
+    vertical-align: middle;
+    border: 1px solid white;
+    box-shadow: 0 0 0 1px black;
+  }
+}
+
+.game {
+  >.players {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 16px;
+  }
+
+  >.map {
+    user-select: none;
+    width: min-content;
+    margin: auto;
+    background-color: #eee;
+    box-shadow: inset 0 0 3px 0;
+    padding: 5px;
+    font-size: 32px;
+    display: grid;
+    grid-template-columns: repeat(30, 64px);
+    transition: 0.5s transform;
+
+    .map-cell {
+      @include floating-card();
+      position: relative;
+      height: 64px;
+      transition: 0.2s background-color;
+    
+      @mixin fullcell {
+        box-sizing: border-box;
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+      }
+
+      &::before {
+        @include fullcell;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: monospace;
+      }
+
+      @for $pl from 1 through 10 {
+        &.pl-#{$pl}::before {
+          @include text-outline(#DDD);
+          color: #555;  
+        }
+      }
+
+      &::after {
+        @include fullcell;
+        font-size: 10pt;
+      }
+      
+      &.cell-active {
+        background-color: lightgreen!important;
+        box-shadow: inset 0 1px 3px 0px;
+    
+        &::before {
+          text-transform: uppercase;
+          /* text-decoration: underline; */
+          font-weight: bold;
+        }
+
+        @for $pl from 1 through 10 {
+          &.apl-#{$pl}::after {
+            content: "#{$pl}";
+          }
+        }
+    
+        &.cell-active-me {
+          background-color: gold!important;
+        }
+      } /* .cell-active */
+
+      &.frozen::after {
+        content: "";
+        border: 5px solid red;
+        box-shadow: 0 0 2px red, 0 0 2px red inset;
+      }
+    } /* .map-cell */
+  }
+}
+
