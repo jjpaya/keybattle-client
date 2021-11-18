@@ -132,6 +132,8 @@ var numPlayers = 0;
 var players = {};
 var endGamePlayers = null;
 var playerColors = null;
+var latency = 50;
+var lastMovementPrediction = null;
 
 document.addEventListener('keydown', e => {
   var key = e.code;
@@ -197,11 +199,11 @@ function movePlayer(key) {
   buf[0] = OPCODE.C.KEYPRESS;
   buf[1] = key.charCodeAt(0);
   ws.send(buf.buffer);
-
-  if (selfPlayer.frozen || !posSynced) {
+  
+  if (selfPlayer.frozen || !posSynced /*|| latency <= 80*/) {
     return;
   }
-
+  
   const getCell = (x, y) => map[x + y * mapWidth];
   const getPlayerAt = (x, y) => {
     for (var id in players) {
@@ -210,7 +212,7 @@ function movePlayer(key) {
         return p;
       }
     }
-
+    
     return null;
   };
   
@@ -224,10 +226,11 @@ function movePlayer(key) {
           /* Unpredictable movement when colliding with players, don't even try */
           break outer_loop;
         }
-
+        
         selfPlayer.x += ox;
         selfPlayer.y += oy;
         posSynced = false;
+        lastMovementPrediction = Date.now();
         renderPlayers();
         break outer_loop;
       }
@@ -462,8 +465,13 @@ function readPacket(data) {
     case OPCODE.S.GAME_PLAYER_DATA:
       var newPlayers = {};
       var paintUpdates = [];
+      var sentOn = Number(dv.getBigInt64(1, true));
+      var now = Date.now();
+      latency += now - sentOn;
+      latency /= 2;
+      console.log(latency, now - lastMovementPrediction);
       /** every player element is 17 bytes in length (id, x, y, points, frozen) */
-      var offs = 1;
+      var offs = 9;
       var numPlayerUpdates = dv.getUint8(offs++);
       for (var i = 0; i < numPlayerUpdates; i++) {
         var pid = dv.getUint32(offs + i * 17, true);
@@ -489,8 +497,14 @@ function readPacket(data) {
       }
 
       players = newPlayers;
-      selfPlayer = players[selfPlayerId];
-      posSynced = true;
+
+      if (!(!posSynced && sentOn - lastMovementPrediction >= latency)) {
+        players[selfPlayerId] = selfPlayer;
+      } else {
+        selfPlayer = players[selfPlayerId];
+        posSynced = true;
+      }
+
       renderPlayers();
       applyPaintUpdates(paintUpdates);
       updateScoreboard();
@@ -532,7 +546,7 @@ async function init() {
     console.log('Disconnected.');
     setGameState(STATE.DISCON);
     setTimeout(init, 4000);
-  }
+  };
 }
 
 init();
