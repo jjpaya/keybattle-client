@@ -1,6 +1,6 @@
 'use strict';
 
-const [ el_game, el_game_map, el_game_players, el_stats_winner, el_end_stats, el_end_close ] = [
+const [el_game, el_game_map, el_game_players, el_stats_winner, el_end_stats, el_end_close] = [
   '.game', '.map', '.players', '.game-winner', '.end-stats', '.close-endscreen'
 ].map(sel => document.querySelector(sel));
 
@@ -74,35 +74,35 @@ function mkHTMLStructure(data, base = null, replace = false) {
 
 /** jquery jjpaya edition */
 function addfuncs(arr) {
-	const bindEvt = (elm, evt, fn) => elm.addEventListener(evt, e => fn(e, elm));
-	const bindEvtOnce = (elms, evt, fn) => {
-		const fnref = e => {
-			fn(e, e.currentTarget);
-			
-			// avoid leaks
-			for (const el of elms) {
-				el.removeEventListener(evt, fnref);
-			}
-		};
-		
-		for (const el of elms) {
-			el.addEventListener(evt, fnref);
-		}
-	};
-	
-	var mkprom = initfn => new Promise(initfn);
-	// bind fn to ev on all selected elems
-	arr.on = (ev, fn) => (arr.forEach(elm => bindEvt(elm, ev, fn)), arr);
-	arr.once = (ev, fn) => fn ? (bindEvtOnce(arr, ev, fn), arr) : mkprom(r => bindEvtOnce(arr, ev, r));
-	arr.click = fn => fn ? arr.on('click', fn) : arr.once('click');
-	arr.addClass = (...cl) => (arr.forEach(elm => elm.classList.add(...cl)), arr);
-	arr.setClass = (...cl) => (arr.forEach(elm => elm.classList = cl.join(' ')), arr);
-	arr.hasClass = cl => (arr.reduce((sum, elm) => sum + elm.classList.contains(cl), 0), arr);
-	arr.delClass = (...cl) => (arr.forEach(elm => elm.classList.remove(...cl)), arr);
-	arr.text = v => (arr.forEach(elm => elm.innerText = v), arr);
-	arr.html = v => (arr.forEach(elm => elm.innerHTML = v), arr);
+  const bindEvt = (elm, evt, fn) => elm.addEventListener(evt, e => fn(e, elm));
+  const bindEvtOnce = (elms, evt, fn) => {
+    const fnref = e => {
+      fn(e, e.currentTarget);
 
-	return arr;
+      // avoid leaks
+      for (const el of elms) {
+        el.removeEventListener(evt, fnref);
+      }
+    };
+
+    for (const el of elms) {
+      el.addEventListener(evt, fnref);
+    }
+  };
+
+  var mkprom = initfn => new Promise(initfn);
+  // bind fn to ev on all selected elems
+  arr.on = (ev, fn) => (arr.forEach(elm => bindEvt(elm, ev, fn)), arr);
+  arr.once = (ev, fn) => fn ? (bindEvtOnce(arr, ev, fn), arr) : mkprom(r => bindEvtOnce(arr, ev, r));
+  arr.click = fn => fn ? arr.on('click', fn) : arr.once('click');
+  arr.addClass = (...cl) => (arr.forEach(elm => elm.classList.add(...cl)), arr);
+  arr.setClass = (...cl) => (arr.forEach(elm => elm.classList = cl.join(' ')), arr);
+  arr.hasClass = cl => (arr.reduce((sum, elm) => sum + elm.classList.contains(cl), 0), arr);
+  arr.delClass = (...cl) => (arr.forEach(elm => elm.classList.remove(...cl)), arr);
+  arr.text = v => (arr.forEach(elm => elm.innerText = v), arr);
+  arr.html = v => (arr.forEach(elm => elm.innerHTML = v), arr);
+
+  return arr;
 }
 
 const $$ = sel => addfuncs(document.querySelectorAll(sel));
@@ -134,6 +134,7 @@ var endGamePlayers = null;
 var playerColors = null;
 var latency = 50;
 var lastMovementPrediction = null;
+var scoreSent = false;
 
 document.addEventListener('keydown', e => {
   var key = e.code;
@@ -162,7 +163,7 @@ function setGameState(state) {
   document.body.setAttribute('game-state', textState);
   oldGameState = gameState;
   gameState = state;
-  
+
   if (textState == 'ended') {
     if (gameState !== oldGameState) {
       endGamePlayers = players;
@@ -170,6 +171,10 @@ function setGameState(state) {
     }
 
     el_end_stats.classList.remove('closed');
+  }
+
+  if (textState == 'playing' && gameState !== oldGameState) {
+    scoreSent = false;
   }
 }
 
@@ -199,11 +204,11 @@ function movePlayer(key) {
   buf[0] = OPCODE.C.KEYPRESS;
   buf[1] = key.charCodeAt(0);
   ws.send(buf.buffer);
-  
+
   if (selfPlayer.frozen || !posSynced /*|| latency <= 80*/) {
     return;
   }
-  
+
   const getCell = (x, y) => map[x + y * mapWidth];
   const getPlayerAt = (x, y) => {
     for (var id in players) {
@@ -212,10 +217,10 @@ function movePlayer(key) {
         return p;
       }
     }
-    
+
     return null;
   };
-  
+
   /* simple move prediction to hide lag */
   outer_loop:
   for (var oy = -1; oy <= 1; oy++) {
@@ -226,7 +231,7 @@ function movePlayer(key) {
           /* Unpredictable movement when colliding with players, don't even try */
           break outer_loop;
         }
-        
+
         selfPlayer.x += ox;
         selfPlayer.y += oy;
         posSynced = false;
@@ -244,7 +249,7 @@ function centerCamera(me) {
   function center() {
     centerCameraFrameRequest = -1;
     if (!me) { return; }
-    var pos = {x: me.offsetLeft, y: me.offsetTop, width: me.offsetWidth, height: me.offsetHeight};
+    var pos = { x: me.offsetLeft, y: me.offsetTop, width: me.offsetWidth, height: me.offsetHeight };
     var x = -(pos.x + pos.width / 2) + window.innerWidth / 2;
     var y = -(pos.y + pos.height / 2) + window.innerHeight / 2;
     el_game_map.style.transform = `translate(${x}px, ${y}px)`;
@@ -253,18 +258,18 @@ function centerCamera(me) {
   if (centerCameraFrameRequest != -1) {
     window.cancelAnimationFrame(centerCameraFrameRequest);
   }
-  
+
   centerCameraFrameRequest = window.requestAnimationFrame(center);
 }
 
 async function loadKbLayout() {
-  var layout = 'qwertyuiopasdfghjklzxcvbnm'.split('').map(c => ['Key'+c.toUpperCase(), c]);
+  var layout = 'qwertyuiopasdfghjklzxcvbnm'.split('').map(c => ['Key' + c.toUpperCase(), c]);
   var cssText = '';
 
   if (navigator.keyboard && navigator.keyboard.getLayoutMap) {
     try {
       layout = await navigator.keyboard.getLayoutMap();
-    } catch(e) { }
+    } catch (e) { }
   }
 
   for (const [k, v] of layout) {
@@ -293,13 +298,38 @@ function initPlayerColors() {
 }
 
 function initStylingConstants() {
-  colorClasses = Array.from({length: playersPerRound}, (a, i) => 'pl-' + (i+1));
-  activeColorClasses = Array.from({length: playersPerRound}, (a, i) => 'apl-' + (i+1));
+  colorClasses = Array.from({ length: playersPerRound }, (a, i) => 'pl-' + (i + 1));
+  activeColorClasses = Array.from({ length: playersPerRound }, (a, i) => 'apl-' + (i + 1));
 }
 
 function updateScoreboard() {
+  function send_score(points) {
+    var token = localStorage.getItem("token");
+    if (token) {
+      var http = new XMLHttpRequest();
+      var url = 'http://0.0.0.0:4000/api/rank/update';
+      var params = JSON.stringify({
+        nameGame: "KeyBattle",
+        score: points
+      });
+      http.open('POST', url, true);
+
+      //Send the proper header information along with the request
+      http.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+      http.setRequestHeader('Authorization', 'Token ' + token);
+
+      http.onreadystatechange = function () { //Call a function when the state changes.
+        if (http.readyState == 4 && http.status == 200) {
+          console.log(http.responseText);
+        }
+      }
+      http.send(params);
+    }
+  }
+
   var elm_scores = $$('.scores')[0];
   var scoreRows = [];
+  var myScore = null;
 
   const playerPaintPoints = id => paintMap.reduce((sum, cell) => sum + (cell === id ? 10 : 0), 0);
 
@@ -310,33 +340,44 @@ function updateScoreboard() {
     scoreRows.push({
       tag: 'div',
       children: [
-        {tag: 'span', innerText: pname},
-        {tag: 'span', innerText: total}
+        { tag: 'span', innerText: pname },
+        { tag: 'span', innerText: total }
       ],
       totalPoints: total,
       playerName: pname
     });
+
+    if ((+id) === selfPlayerId) {
+      myScore = total;
+    }
   }
 
   scoreRows = scoreRows.sort((a, b) => b.totalPoints - a.totalPoints);
 
-  if (scoreRows[0]) {
-    var winner = scoreRows[0];
-    mkHTMLStructure({children: [{
-      tag: 'b',
-      innerText: winner.playerName
-    }, {
-      tag: 'span',
-      innerText: 'won the game with ' + winner.totalPoints + ' points!'
-    }]}, el_stats_winner, true);
+  if (myScore !== null && gameState == STATE.ENDED && !scoreSent) {
+    scoreSent = true;
+    try { send_score(myScore); } catch (e) { console.log(e); }
   }
 
-  mkHTMLStructure({children: scoreRows}, elm_scores, true);
+  if (scoreRows[0]) {
+    var winner = scoreRows[0];
+    mkHTMLStructure({
+      children: [{
+        tag: 'b',
+        innerText: winner.playerName
+      }, {
+        tag: 'span',
+        innerText: 'won the game with ' + winner.totalPoints + ' points!'
+      }]
+    }, el_stats_winner, true);
+  }
+
+  mkHTMLStructure({ children: scoreRows }, elm_scores, true);
 }
 
 function renderMap() {
   var mapStruct;
-  
+
   const getColorPlayer = i => paintMap[i] > 0 ? 'pl-' + paintMap[i] : '';
   /** Convert map array to element array to pass to mkHTMLStructure */
   mapStruct = map.map((char, i) => ({
@@ -344,7 +385,7 @@ function renderMap() {
     className: 'map-cell kb-key' + char.toLowerCase() + ' ' + getColorPlayer(i)
   }));
 
-  mkHTMLStructure({children: mapStruct}, el_game_map, true);
+  mkHTMLStructure({ children: mapStruct }, el_game_map, true);
   renderPlayers();
 }
 
@@ -404,7 +445,7 @@ function tick() {
   if (!stateTime) {
     return;
   }
-  
+
   var now = Date.now();
   var time = new Date(stateTime).getTime();
   var deltaSec = (now - time) / 1000;
@@ -443,7 +484,7 @@ function readPacket(data) {
       stateTime = Number(dv.getBigInt64(16, true));
       playerColors = [];
       for (var i = 24; i < buf.byteLength; i += 4) {
-        playerColors.push('#'+dv.getUint32(i, false).toString(16).padStart(8, '0'));
+        playerColors.push('#' + dv.getUint32(i, false).toString(16).padStart(8, '0'));
       }
       console.log("Got game id:", gameId, ",", numPlayers, "players,", mapWidth, "mapWidth, colors:", playerColors);
       initPlayerColors();
@@ -479,7 +520,7 @@ function readPacket(data) {
         newPlayers[pid] = {
           x: dv.getInt32(offs + i * 17 + 4, true),
           y: dv.getInt32(offs + i * 17 + 8, true),
-          lastPoints: (players[pid] || {points}).points,
+          lastPoints: (players[pid] || { points }).points,
           points: points,
           frozen: dv.getUint8(offs + i * 17 + 16)
         };
@@ -517,7 +558,7 @@ function readPacket(data) {
 
     case OPCODE.S.GAME_WRONG_MOVE:
       break;
-      
+
     case OPCODE.S.GAME_PAINT_CLEAR:
       console.log('Paint map clear');
       for (var i = 0; i < paintMap.length; i++) {
