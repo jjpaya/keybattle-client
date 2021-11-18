@@ -506,13 +506,13 @@ function readPacket(data) {
     case OPCODE.S.GAME_PLAYER_DATA:
       var newPlayers = {};
       var paintUpdates = [];
-      var sentOn = Number(dv.getBigInt64(1, true));
       var now = Date.now();
+      var sentOn = now/*Number(dv.getBigInt64(1, true))*/;
       latency += now - sentOn;
       latency /= 2;
-      console.log(latency, now - lastMovementPrediction);
+      //console.log(latency, now - lastMovementPrediction);
       /** every player element is 17 bytes in length (id, x, y, points, frozen) */
-      var offs = 9;
+      var offs = 1;
       var numPlayerUpdates = dv.getUint8(offs++);
       for (var i = 0; i < numPlayerUpdates; i++) {
         var pid = dv.getUint32(offs + i * 17, true);
