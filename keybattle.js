@@ -205,6 +205,7 @@ function movePlayer(key) {
   buf[1] = key.charCodeAt(0);
   ws.send(buf.buffer);
 
+  return;
   if (selfPlayer.frozen || !posSynced /*|| latency <= 80*/) {
     return;
   }
@@ -539,12 +540,12 @@ function readPacket(data) {
 
       players = newPlayers;
 
-      if (!(!posSynced && sentOn - lastMovementPrediction >= latency)) {
+      /*if (!(!posSynced && sentOn - lastMovementPrediction >= latency)) {
         players[selfPlayerId] = selfPlayer;
-      } else {
+      } else {*/
         selfPlayer = players[selfPlayerId];
         posSynced = true;
-      }
+      //}
 
       renderPlayers();
       applyPaintUpdates(paintUpdates);
